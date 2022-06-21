@@ -630,12 +630,12 @@ return function(Vargs, GetEnv)
 				end
 
 				-- // Checks for certain disallowed object names in the core GUI which wouldnt otherwise be detectable
-				for _, v in pairs({"SentinelSpy", "ScriptDumper", "VehicleNoclip", "Strong Stand"}) do -- recursive findfirstchild check that yeets some stuff; --[["Sentinel",]]
+				--[=[for _, v in pairs({"SentinelSpy", "ScriptDumper", "VehicleNoclip", "Strong Stand"}) do -- recursive findfirstchild check that yeets some stuff; --[["Sentinel",]]
 					local object = Player and Player.Name ~= v and service.UnWrap(game).FindFirstChild(service.UnWrap(game), v, true)            -- ill update the list periodically
 					if object then
-						--Detected("kick", "Malicious Object?: " .. v)
+						Detected("kick", "Malicious Object?: " .. v)
 					end
-				end
+				end]=]
 
 				local function getDictionaryLenght(dictionary)
 					local len = 0
@@ -666,7 +666,8 @@ return function(Vargs, GetEnv)
 				end
 
 				-- // Checks for anti-coregui detetection bypasses
-				xpcall(function()
+				-- It's not physically possible for this code to error, yet it still does, weird
+				--[[xpcall(function()
 					local testDecal = service.UnWrap(Instance.new("Decal"))
 					testDecal.Texture = "rbxasset://textures/face.png" -- Its a local asset and it's probably likely to never get removed, so it will never fail to load, unless the users PC is corrupted
 					local activated = false
@@ -682,8 +683,8 @@ return function(Vargs, GetEnv)
 						Detected("log", "Coregui detection bypass found")
 					end
 				end, function()
-					--Detected("kick", "Tamper Protection 568234")
-				end)
+					Detected("kick", "Tamper Protection 568234")
+				end)]]
 
 				-- // Checks disallowed content URLs in the CoreGui
 				xpcall(function()
