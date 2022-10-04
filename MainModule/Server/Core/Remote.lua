@@ -92,6 +92,8 @@ return function(Vargs, GetEnv)
 			DataStoreKey = true;
 			DataStoreEnabled = true;
 
+			LoadAdminsFromDS = true;
+
 			Creators = true;
 			Permissions = true;
 
@@ -180,7 +182,7 @@ return function(Vargs, GetEnv)
 
 				if type(setting) == "table" then
 					ret = {}
-					for _,set in pairs(setting) do
+					for _,set in setting do
 						if Defaults[set] and (not blocked[set] or level >= Settings.Ranks.Creators.Level) then
 							ret[set] = Defaults[set]
 						end
@@ -227,7 +229,7 @@ return function(Vargs, GetEnv)
 						CustomRanks = true; -- Not supported yet
 					}
 
-					for setting in pairs(sets.Settings) do
+					for setting in sets.Settings do
 						if blocked[setting] then
 							sets.Settings[setting] = nil
 						end
@@ -245,7 +247,7 @@ return function(Vargs, GetEnv)
 
 				if type(setting) == "table" then
 					ret = {}
-					for _,set in pairs(setting) do
+					for _,set in setting do
 						if Settings[set] and (allowed[set] or level>=Settings.Ranks.Creators.Level) then
 							ret[set] = Settings[set]
 						end
@@ -269,7 +271,7 @@ return function(Vargs, GetEnv)
 
 					local blocked = Remote.BlockedSettings
 
-					for setting in pairs(sets.Settings) do
+					for setting in sets.Settings do
 						if blocked[setting] then
 							sets.Settings[setting] = nil
 						end
@@ -372,7 +374,7 @@ return function(Vargs, GetEnv)
 					local data = Core.GetPlayer(p)
 
 					--// check for stupid stuff
-					for i,v in next, aliases do
+					for i,v in aliases do
 						if type(i) ~= "string" or type(v) ~= "string" then
 							aliases[i] = nil
 						end
@@ -403,9 +405,9 @@ return function(Vargs, GetEnv)
 			FormattedCommands = function(p: Player,args: {[number]: any})
 				local commands = Admin.SearchCommands(p,args[1] or "all")
 				local tab = {}
-				for _,v in pairs(commands) do
+				for _,v in commands do
 					if not v.Hidden and not v.Disabled then
-						for a in pairs(v.Commands) do
+						for a in v.Commands do
 							table.insert(tab,Admin.FormatCommand(v,a))
 						end
 					end
@@ -463,7 +465,23 @@ return function(Vargs, GetEnv)
 			end;
 
 			AudioLib = function(p,args)
-				if Admin.GetLevel(p) >= Settings.Ranks.Moderators.Level then
+				local canUseGlobalBroadcast
+				local cmd, ind
+				for i, v in Admin.SearchCommands(p, "all") do
+					for _, c in ipairs(v.Commands) do
+						if (v.Prefix or "")..string.lower(c) == (v.Prefix or "")..string.lower("music") then
+							cmd, ind = v, i
+							break
+						end
+					end
+					if ind then break end
+				end
+				if cmd then
+					canUseGlobalBroadcast = true
+				else
+					canUseGlobalBroadcast = false
+				end
+				if canUseGlobalBroadcast then
 					if not server.Functions.AudioLib then
 						local audioLibFolder = workspace:FindFirstChild("ADONIS_AUDIOLIB")
 						if not audioLibFolder then
@@ -475,13 +493,6 @@ return function(Vargs, GetEnv)
 					end
 
 					return server.Functions.AudioLib[args[1][1]](server.Functions.AudioLib, args[1][2])
-				else
-					task.spawn(Remote.MakeGui,p,"Notification",{
-						Title = "Global Audio";
-						Message = "Only Moderators or above may broadcast audio!";
-						Icon = server.Shared.MatIcons.Language;
-						Time = 3;
-					})
 				end
 			end;
 		};
@@ -500,7 +511,7 @@ return function(Vargs, GetEnv)
 					Description = "Shows a list of available commands and their usage";
 					Function = function(p,args,data)
 						local output = {}
-						for i,v in next,Remote.Terminal.Commands do
+						for i,v in Remote.Terminal.Commands do
 							table.insert(output, tostring(v.Usage).. string.rep(" ",30-string.len(tostring(v.Usage))))
 							table.insert(output, "- ".. tostring(v.Description))
 						end
@@ -514,7 +525,7 @@ return function(Vargs, GetEnv)
 					Arguments = 1;
 					Description = "Sends a message in the Roblox chat";
 					Function = function(p, args, data)
-						for _,v in ipairs(service.GetPlayers()) do
+						for _,v in service.GetPlayers() do
 							Remote.Send(v,"Function","ChatMessage",args[1],Color3.fromRGB(255,64,77))
 						end
 					end
@@ -537,8 +548,8 @@ return function(Vargs, GetEnv)
 					Description = "Loads and runs the given lua string";
 					Function = function(p,args,data)
 						local newenv = GetEnv(getfenv(),{
-							print = function(...) local nums = {...} for _,v in ipairs(nums) do Remote.Terminal.LiveOutput(p,"PRINT: "..tostring(v)) end end;
-							warn = function(...) local nums = {...} for _,v in ipairs(nums) do Remote.Terminal.LiveOutput(p,"WARN: "..tostring(v)) end end;
+							print = function(...) local nums = {...} for _,v in nums do Remote.Terminal.LiveOutput(p,"PRINT: "..tostring(v)) end end;
+							warn = function(...) local nums = {...} for _,v in nums do Remote.Terminal.LiveOutput(p,"WARN: "..tostring(v)) end end;
 						})
 
 						if not server.Remote.RemoteExecutionConfirmed[p.UserId] then
@@ -546,7 +557,7 @@ return function(Vargs, GetEnv)
 								Icon = server.MatIcons.Warning;
 								Question = "Are you sure you want to load this script into the server env?";
 								Title = "Adonis DebugLoadstring";
-								Delay = 5;
+								Delay = 3;
 							})
 
 							if ans == "Yes" then
@@ -599,7 +610,7 @@ return function(Vargs, GetEnv)
 					Function = function(p, args, data)
 						local plrs = service.GetPlayers(p,args[1])
 						if #plrs>0 then
-							for _,v in ipairs(plrs) do
+							for _,v in plrs do
 								v:Kick(args[2] or "Disconnected by server")
 								return {"Disconnect "..tostring(v.Name).." from the server"}
 							end
@@ -617,7 +628,7 @@ return function(Vargs, GetEnv)
 					Function = function(p,args,data)
 						local plrs = service.GetPlayers(p,args[1])
 						if #plrs>0 then
-							for _,v in ipairs(plrs) do
+							for _,v in plrs do
 								local char = v.Character
 								if char and char.ClassName == "Model" then
 									char:BreakJoints()
@@ -640,7 +651,7 @@ return function(Vargs, GetEnv)
 					Function = function(p,args,data)
 						local plrs = service.GetPlayers(p,args[1])
 						if #plrs>0 then
-							for _,v in ipairs(plrs) do
+							for _,v in plrs do
 								v:LoadCharacter()
 								return {"Respawned "..tostring(v.Name)}
 							end
@@ -660,7 +671,7 @@ return function(Vargs, GetEnv)
 							p:Kick()
 						end)
 
-						for _,v in ipairs(service.Players:GetPlayers()) do
+						for _,v in service.Players:GetPlayers() do
 							v:Kick()
 						end
 					end
@@ -672,22 +683,12 @@ return function(Vargs, GetEnv)
 
 		};
 
-		UnEncrypted = {
-			--[[TrustCheck = function(p)
-				local keys = Remote.Clients[tostring(p.UserId)]
-				Remote.Fire(p, "TrustCheck", keys.Special)
-			end;--]]
-
-			ProcessChat = function(p: Player,msg: string)
-				Process.Chat(p,msg)
-			end;
-
-			ExplorerAction = function(p: Player, ...)
-				--if Admin.CheckAdmin(p) then
-				--// Handle stuff like Dex calls(?)
-				--end
-			end;
-		};
+		UnEncrypted = setmetatable({}, {
+			__newindex = function(_, ind, val)
+				warn("Unencrypted remote commands are deprecated; moving", ind, "to Remote.Commands")
+				Remote.Commands[ind] = val
+			end
+		});
 
 		Commands = {
 			GetReturn = function(p: Player,args: {[number]: any})
@@ -804,7 +805,7 @@ return function(Vargs, GetEnv)
 
 					if setting == 'Prefix' or setting == 'AnyPrefix' or setting == 'SpecialPrefix' then
 						local orig = Settings[setting]
-						for _, v in pairs(Commands) do
+						for _, v in Commands do
 							if v.Prefix == orig then
 								v.Prefix = value
 							end
@@ -837,7 +838,7 @@ return function(Vargs, GetEnv)
 
 					if setting == "Prefix" or setting == "AnyPrefix" or setting == "SpecialPrefix" then
 						local orig = Settings[setting]
-						for _, v in pairs(Commands) do
+						for _, v in Commands do
 							if v.Prefix == orig then
 								v.Prefix = value
 							end
@@ -856,9 +857,9 @@ return function(Vargs, GetEnv)
 
 			TrelloOperation = function(p: Player,args: {[number]: any})
 				local adminLevel = Admin.GetLevel(p)
-				
+
 				local trello = HTTP.Trello.API
-				
+
 				local data = args[1]
 				if data.Action == "MakeCard" then
 					local command = Commands.MakeCard
@@ -866,14 +867,14 @@ return function(Vargs, GetEnv)
 						local listName = data.List
 						local name = data.Name
 						local desc = data.Desc
-						
-						for _, overrideList in ipairs(HTTP.Trello.GetOverrideLists()) do 
+
+						for _, overrideList in HTTP.Trello.GetOverrideLists() do
 							if service.Trim(string.lower(overrideList)) == service.Trim(string.lower(listName)) then
 								Functions.Hint("You cannot create a card in that list", {p})
 								return
 							end
 						end
-						
+
 						local lists = trello.getLists(Settings.Trello_Primary)
 						local list = trello.getListObj(lists, listName)
 						if list then
@@ -901,7 +902,7 @@ return function(Vargs, GetEnv)
 					client.LoadingStatus = "READY"
 
 					service.Events.ClientLoaded:Fire(p)
-					Process.FinishLoading(p)
+					task.defer(Process.FinishLoading, p)
 				else
 					warn("[CLI-199524] ClientLoaded fired when not ready for ".. tostring(p))
 					Logs:AddLog("Script", string.format("%s fired ClientLoaded too early", tostring(p)));
@@ -1007,7 +1008,7 @@ return function(Vargs, GetEnv)
 
 				SendToUsers = function(self, ...)
 					if not self.Ended then
-						for p in next,self.Users do
+						for p in self.Users do
 							Remote.Send(p, "SessionData", self.SessionKey, ...);
 						end;
 					end
@@ -1027,7 +1028,7 @@ return function(Vargs, GetEnv)
 
 				End = function(self)
 					if not self.Ended then
-						for t,event in next,self.Events do
+						for t,event in self.Events do
 							event:Disconnect();
 						end
 						table.clear(self.Events)
@@ -1159,7 +1160,7 @@ return function(Vargs, GetEnv)
 
 		CheckKeys = function()
 			--// Check all keys for ones no longer in use for >10 minutes (so players who actually left aren't tracked forever)
-			for key, data in pairs(Remote.Clients) do
+			for key, data in Remote.Clients do
 				local continue = true;
 
 				if data.Player and data.Player.Parent == service.Players then
@@ -1187,14 +1188,16 @@ return function(Vargs, GetEnv)
 		end;
 
 		MakeGui = function(p: Player,GUI: string,data: {[any]: any},themeData: {[string]: any})
+			if not p then return end
 			local theme = {Desktop = Settings.Theme; Mobile = Settings.MobileTheme}
-			if themeData then for ind,dat in pairs(themeData) do theme[ind] = dat end end
+			if themeData then for ind,dat in themeData do theme[ind] = dat end end
 			Remote.Send(p,"UI",GUI,theme,data or {})
 		end;
 
 		MakeGuiGet = function(p: Player,GUI: string,data: {[any]: any},themeData: {[string]: any})
+			if not p then return nil end
 			local theme = {Desktop = Settings.Theme; Mobile = Settings.MobileTheme}
-			if themeData then for ind,dat in pairs(themeData) do theme[ind] = dat end end
+			if themeData then for ind,dat in themeData do theme[ind] = dat end end
 			return Remote.Get(p,"UI",GUI,theme,data or {})
 		end;
 
@@ -1203,12 +1206,14 @@ return function(Vargs, GetEnv)
 		end;
 
 		RemoveGui = function(p: Player,name: string | boolean | Instance,ignore: string)
+			if not p then return end
 			Remote.Send(p,"RemoveUI",name,ignore)
 		end;
 
 		RefreshGui = function(p: Player,name: string | boolean | Instance,ignore: string,data: {[any]: any},themeData: {[string]: any})
+			if not p then return end
 			local theme = {Desktop = Settings.Theme; Mobile = Settings.MobileTheme}
-			if themeData then for ind,dat in pairs(themeData) do theme[ind] = dat end end
+			if themeData then for ind,dat in themeData do theme[ind] = dat end end
 			Remote.Send(p,"RefreshUI",name,ignore,themeData,data or {})
 		end;
 
